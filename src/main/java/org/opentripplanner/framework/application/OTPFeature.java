@@ -93,6 +93,7 @@ public enum OTPFeature {
   SandboxAPITransmodelApi(false, true, "Enable Entur Transmodel(NeTEx) GraphQL API."),
   SandboxAPITravelTime(false, true, "Enable the isochrone/travel time surface API."),
   TransferAnalyzer(false, true, "Analyze transfers during graph build."),
+  TransitChangeAPI(false, true, "Enable the transit change API."),
   VehicleToStopHeuristics(false, true, "Enable improved heuristic for park-and-ride queries.");
 
   private static final Object TEST_LOCK = new Object();

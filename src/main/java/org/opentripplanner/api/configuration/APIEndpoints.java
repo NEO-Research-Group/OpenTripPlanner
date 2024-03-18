@@ -12,6 +12,7 @@ import static org.opentripplanner.framework.application.OTPFeature.SandboxAPIMap
 import static org.opentripplanner.framework.application.OTPFeature.SandboxAPIParkAndRideApi;
 import static org.opentripplanner.framework.application.OTPFeature.SandboxAPITransmodelApi;
 import static org.opentripplanner.framework.application.OTPFeature.SandboxAPITravelTime;
+import static org.opentripplanner.framework.application.OTPFeature.TransitChangeAPI;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,6 +30,7 @@ import org.opentripplanner.ext.geocoder.GeocoderResource;
 import org.opentripplanner.ext.gtfsgraphqlapi.GtfsGraphQLAPI;
 import org.opentripplanner.ext.parkAndRideApi.ParkAndRideResource;
 import org.opentripplanner.ext.reportapi.resource.ReportResource;
+import org.opentripplanner.ext.transitchange.TransitChangeApi;
 import org.opentripplanner.ext.transmodelapi.TransmodelAPI;
 import org.opentripplanner.ext.traveltime.TravelTimeResource;
 import org.opentripplanner.ext.vectortiles.VectorTilesResource;
@@ -65,6 +67,7 @@ public class APIEndpoints {
     addIfEnabled(SandboxAPIParkAndRideApi, ParkAndRideResource.class);
     addIfEnabled(SandboxAPIGeocoder, GeocoderResource.class);
     addIfEnabled(SandboxAPITravelTime, TravelTimeResource.class);
+    addIfEnabled(TransitChangeAPI, TransitChangeApi.class);
   }
 
   /**
