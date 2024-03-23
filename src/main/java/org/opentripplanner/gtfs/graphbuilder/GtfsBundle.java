@@ -41,7 +41,7 @@ public class GtfsBundle {
     this(DataStoreModule.compositeSource(gtfsFile, FileType.GTFS));
   }
 
-  private GtfsBundle(CompositeDataSource compositeDataSource) {
+  public GtfsBundle(CompositeDataSource compositeDataSource) {
     this(
       new ConfiguredDataSource<>(
         compositeDataSource,

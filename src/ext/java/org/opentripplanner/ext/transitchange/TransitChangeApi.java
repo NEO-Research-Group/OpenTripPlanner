@@ -1,14 +1,21 @@
 package org.opentripplanner.ext.transitchange;
 
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import org.apache.commons.io.IOUtils;
+import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
+import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.opentripplanner.ext.transitchange.updater.TransitChangeUpdater;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.standalone.api.OtpServerRequestContext;
@@ -41,15 +48,20 @@ public class TransitChangeApi {
   }
 
   @POST
-  @Path("/load/{message}")
-  public Response load(@PathParam("message") @DefaultValue("") String message) {
+  @Path("/addGTFS")
+  @Consumes(MediaType.MULTIPART_FORM_DATA)
+  public Response load(@FormDataParam("feed") InputStream feedContent) {
     LOG.info("Loading transit change data");
-    try {
-      TransitChangeUpdater.queue.put(message);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+    try (var output = new ByteArrayOutputStream()) {
+      IOUtils.copy(feedContent, output);
+      TransitChangeUpdater.addGTFSFeed(
+        TransitChangeUpdater.TransitChangeMessage.gtfsFeed(output.toByteArray())
+      );
+    } catch (IOException e) {
+      LOG.error("Error reading feed content", e.getMessage());
     }
-    return Response.ok("Hola").build();
+    IOUtils.closeQuietly(feedContent);
+    return Response.ok().build();
   }
 
   public void setTransitModel(TransitModel transitModel) {

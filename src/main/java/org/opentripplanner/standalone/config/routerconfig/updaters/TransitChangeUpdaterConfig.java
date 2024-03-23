@@ -7,7 +7,6 @@ import org.opentripplanner.standalone.config.framework.json.NodeAdapter;
 public class TransitChangeUpdaterConfig {
 
   public static TransitChangeUpdaterParameters create(String configRef, NodeAdapter c) {
-    String file = c.of("gtfsFile").asString();
-    return new TransitChangeUpdaterParameters(configRef, new File(file));
+    return new TransitChangeUpdaterParameters(configRef);
   }
 }

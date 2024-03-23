@@ -17,6 +17,7 @@ import org.glassfish.jersey.CommonProperties;
 import org.glassfish.jersey.internal.inject.AbstractBinder;
 import org.glassfish.jersey.internal.inject.Binder;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ServerProperties;
 import org.opentripplanner.api.common.OTPExceptionMapper;
 import org.opentripplanner.api.configuration.APIEndpoints;
@@ -70,6 +71,8 @@ public class OTPWebApplication extends Application {
     Set<Class<?>> classes = new HashSet<>(APIEndpoints.listAPIEndpoints());
 
     classes.addAll(resolveFilterClasses());
+
+    classes.add(MultiPartFeature.class);
 
     return classes;
   }
