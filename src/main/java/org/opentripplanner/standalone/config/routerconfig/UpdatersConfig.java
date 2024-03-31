@@ -3,6 +3,7 @@ package org.opentripplanner.standalone.config.routerconfig;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V1_5;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_2;
 import static org.opentripplanner.standalone.config.routerconfig.UpdatersConfig.Type.BIKE_RENTAL;
+import static org.opentripplanner.standalone.config.routerconfig.UpdatersConfig.Type.BIKE_UPDATER;
 import static org.opentripplanner.standalone.config.routerconfig.UpdatersConfig.Type.MQTT_GTFS_RT_UPDATER;
 import static org.opentripplanner.standalone.config.routerconfig.UpdatersConfig.Type.REAL_TIME_ALERTS;
 import static org.opentripplanner.standalone.config.routerconfig.UpdatersConfig.Type.SIRI_AZURE_ET_UPDATER;
@@ -28,10 +29,12 @@ import org.opentripplanner.ext.siri.updater.SiriETUpdaterParameters;
 import org.opentripplanner.ext.siri.updater.SiriSXUpdaterParameters;
 import org.opentripplanner.ext.siri.updater.azure.SiriAzureETUpdaterParameters;
 import org.opentripplanner.ext.siri.updater.azure.SiriAzureSXUpdaterParameters;
+import org.opentripplanner.ext.transitchange.updater.BikeUpdaterParameters;
 import org.opentripplanner.ext.transitchange.updater.TransitChangeUpdaterParameters;
 import org.opentripplanner.ext.vehiclerentalservicedirectory.VehicleRentalServiceDirectoryFetcher;
 import org.opentripplanner.ext.vehiclerentalservicedirectory.api.VehicleRentalServiceDirectoryFetcherParameters;
 import org.opentripplanner.standalone.config.framework.json.NodeAdapter;
+import org.opentripplanner.standalone.config.routerconfig.updaters.BikeUpdaterConfig;
 import org.opentripplanner.standalone.config.routerconfig.updaters.GtfsRealtimeAlertsUpdaterConfig;
 import org.opentripplanner.standalone.config.routerconfig.updaters.MqttGtfsRealtimeUpdaterConfig;
 import org.opentripplanner.standalone.config.routerconfig.updaters.PollingTripUpdaterConfig;
@@ -218,6 +221,11 @@ public class UpdatersConfig implements UpdatersParameters {
     return getParameters(TRANSIT_CHANGE_UPDATER);
   }
 
+  @Override
+  public List<BikeUpdaterParameters> getBikeUpdaterParameters() {
+    return getParameters(BIKE_UPDATER);
+  }
+
   private <T> List<T> getParameters(Type key) {
     return (List<T>) configList.get(key);
   }
@@ -239,7 +247,8 @@ public class UpdatersConfig implements UpdatersParameters {
     SIRI_SX_UPDATER(SiriSXUpdaterConfig::create),
     SIRI_AZURE_ET_UPDATER(SiriAzureETUpdaterConfig::create),
     SIRI_AZURE_SX_UPDATER(SiriAzureSXUpdaterConfig::create),
-    TRANSIT_CHANGE_UPDATER(TransitChangeUpdaterConfig::create);
+    TRANSIT_CHANGE_UPDATER(TransitChangeUpdaterConfig::create),
+    BIKE_UPDATER(BikeUpdaterConfig::create);
 
     private final BiFunction<String, NodeAdapter, ?> factory;
 

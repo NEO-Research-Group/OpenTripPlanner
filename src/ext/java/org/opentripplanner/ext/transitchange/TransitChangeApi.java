@@ -16,6 +16,7 @@ import java.io.InputStream;
 import org.apache.commons.io.IOUtils;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.opentripplanner.ext.transitchange.updater.BikeUpdater;
 import org.opentripplanner.ext.transitchange.updater.TransitChangeUpdater;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.standalone.api.OtpServerRequestContext;
@@ -61,6 +62,13 @@ public class TransitChangeApi {
       LOG.error("Error reading feed content", e.getMessage());
     }
     IOUtils.closeQuietly(feedContent);
+    return Response.ok().build();
+  }
+
+  @POST
+  @Path("/addCycleway")
+  public Response bikePath() {
+    BikeUpdater.addBike("Hola");
     return Response.ok().build();
   }
 

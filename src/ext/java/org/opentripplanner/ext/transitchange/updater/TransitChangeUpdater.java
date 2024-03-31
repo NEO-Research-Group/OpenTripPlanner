@@ -10,7 +10,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import org.opentripplanner.datastore.api.FileType;
-import org.opentripplanner.datastore.file.TemporaryFileDataSource;
 import org.opentripplanner.datastore.file.ZipFileDataSource;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.model.GraphBuilderModule;

@@ -8,6 +8,7 @@ import org.opentripplanner.ext.siri.updater.SiriETUpdater;
 import org.opentripplanner.ext.siri.updater.SiriSXUpdater;
 import org.opentripplanner.ext.siri.updater.azure.SiriAzureETUpdater;
 import org.opentripplanner.ext.siri.updater.azure.SiriAzureSXUpdater;
+import org.opentripplanner.ext.transitchange.updater.BikeUpdater;
 import org.opentripplanner.ext.transitchange.updater.TransitChangeUpdater;
 import org.opentripplanner.ext.vehiclerentalservicedirectory.VehicleRentalServiceDirectoryFetcher;
 import org.opentripplanner.ext.vehiclerentalservicedirectory.api.VehicleRentalServiceDirectoryFetcherParameters;
@@ -210,6 +211,10 @@ public class UpdaterConfigurator {
 
     for (var configItem : updatersParameters.getTransitChangeUpdaterParameters()) {
       updaters.add(new TransitChangeUpdater(configItem, transitModel, graph.getLinker()));
+    }
+
+    for (var configItem : updatersParameters.getBikeUpdaterParameters()) {
+      updaters.add(new BikeUpdater(configItem, transitModel, graph.getLinker()));
     }
 
     return updaters;
