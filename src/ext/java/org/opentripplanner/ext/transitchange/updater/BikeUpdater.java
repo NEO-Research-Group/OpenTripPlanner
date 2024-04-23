@@ -7,6 +7,8 @@ import org.opentripplanner.openstreetmap.model.OSMWay;
 import org.opentripplanner.openstreetmap.tagmapping.OsmTagMapperSource;
 import org.opentripplanner.openstreetmap.wayproperty.WayPropertySet;
 import org.opentripplanner.routing.graph.Graph;
+import org.opentripplanner.routing.linking.DisposableEdgeCollection;
+import org.opentripplanner.routing.linking.Scope;
 import org.opentripplanner.routing.linking.VertexLinker;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.edge.StreetEdge;
@@ -22,9 +24,24 @@ public class BikeUpdater implements GraphUpdater {
 
   public record OSMWayTagDTO(String key, String value) {}
 
+  public enum BikeUpdateType {
+    RESET,
+    ADD,
+  }
+
+  private record BikeUpdateMessage(BikeUpdateType type, BikeUpdate update) {
+    public static BikeUpdateMessage reset() {
+      return new BikeUpdateMessage(BikeUpdateType.RESET, null);
+    }
+
+    public static BikeUpdateMessage add(BikeUpdate update) {
+      return new BikeUpdateMessage(BikeUpdateType.ADD, update);
+    }
+  }
+
   public record BikeUpdate(long[] osmNodeIds, boolean bothways, OSMWayTagDTO[] osmTags) {}
 
-  private static final BlockingQueue<BikeUpdate> queue = new LinkedBlockingQueue<>();
+  private static final BlockingQueue<BikeUpdateMessage> queue = new LinkedBlockingQueue<>();
 
   private static final Logger LOG = LoggerFactory.getLogger(TransitChangeUpdater.class);
 
@@ -33,16 +50,16 @@ public class BikeUpdater implements GraphUpdater {
   private final VertexLinker linker;
   private final BikeUpdaterParameters parameters;
   private final WayPropertySet wayPropertySet;
+  private final Graph graph;
+  private DisposableEdgeCollection disposableEdges;
 
-  public BikeUpdater(
-    BikeUpdaterParameters parameters,
-    TransitModel transitModel,
-    VertexLinker linker
-  ) {
+  public BikeUpdater(BikeUpdaterParameters parameters, TransitModel transitModel, Graph graph) {
     this.transitModel = transitModel;
-    this.linker = linker;
+    this.graph = graph;
+    this.linker = graph.getLinker();
     this.parameters = parameters;
     this.wayPropertySet = new WayPropertySet();
+    this.disposableEdges = new DisposableEdgeCollection(graph, Scope.REALTIME);
     // Using the default tag mapper
     OsmTagMapperSource.DEFAULT.getInstance().populateProperties(wayPropertySet);
   }
@@ -71,15 +88,23 @@ public class BikeUpdater implements GraphUpdater {
     LOG.info("Running bike updater");
     try {
       while (true) {
-        BikeUpdate bike = queue.take();
-        LOG.info("Adding bike: {}", bike);
+        BikeUpdateMessage bike = queue.take();
 
         saveResultOnGraph.execute((graph, transitModel) -> {
-          addRuta(graph, bike);
+          if (bike.type() == BikeUpdateType.RESET) {
+            LOG.info("Reseting cycleways");
+            LOG.info(String.format("Removing %d edges", disposableEdges.size()));
+            disposableEdges.disposeEdges();
+          } else {
+            LOG.info("Adding bike: {}", bike.update());
+            int count = disposableEdges.size();
+            addRuta(graph, bike.update());
+            LOG.info(String.format("Added %d edges", disposableEdges.size() - count));
+          }
         });
       }
     } catch (InterruptedException e) {
-      LOG.info("Interrupted: goin to finish");
+      LOG.info("Interrupted: going to finish");
     }
   }
 
@@ -121,7 +146,7 @@ public class BikeUpdater implements GraphUpdater {
     LOG.info("vertex: " + start.toString() + " outgoing degree: " + start.getDegreeOut());
     var end = graph.getVertex(endLabel);
     for (Edge edge : start.getOutgoing()) {
-      if (edge.getToVertex().equals(end)) {
+      if (edge.getToVertex().equals(end) && !disposableEdges.contains(edge)) {
         StreetEdge st = (StreetEdge) edge;
         StreetEdgeBuilder builder = new StreetEdgeBuilder(st);
         StreetEdge e = builder
@@ -130,7 +155,7 @@ public class BikeUpdater implements GraphUpdater {
           .withPermission(wayProperties.getPermission())
           .withName(st.getName() + " (bike lane)")
           .buildAndConnect();
-        //st.remove();
+        disposableEdges.addEdge(e);
         LOG.info("Created edge: " + e.toString());
       }
     }
@@ -142,6 +167,10 @@ public class BikeUpdater implements GraphUpdater {
   }
 
   public static void addBike(BikeUpdate update) {
-    queue.add(update);
+    queue.add(BikeUpdateMessage.add(update));
+  }
+
+  public static void resetBike() {
+    queue.add(BikeUpdateMessage.reset());
   }
 }

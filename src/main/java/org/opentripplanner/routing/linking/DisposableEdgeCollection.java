@@ -33,6 +33,10 @@ public class DisposableEdgeCollection {
     this.edges.add(edge);
   }
 
+  public void addAllEdges(Collection<Edge> edges) {
+    this.edges.addAll(edges);
+  }
+
   /**
    * Removes all the edges in this collection from the graph.
    */
@@ -52,5 +56,13 @@ public class DisposableEdgeCollection {
       graph.removeIfUnconnected(v);
     }
     edges.clear();
+  }
+
+  public boolean contains(Edge edge) {
+    return edges.contains(edge);
+  }
+
+  public int size() {
+    return edges.size();
   }
 }

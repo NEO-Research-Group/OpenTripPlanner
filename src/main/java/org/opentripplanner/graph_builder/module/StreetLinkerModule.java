@@ -3,6 +3,7 @@ package org.opentripplanner.graph_builder.module;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.framework.logging.ProgressTracker;
@@ -10,16 +11,21 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issues.ParkAndRideEntranceRemoved;
 import org.opentripplanner.graph_builder.model.GraphBuilderModule;
 import org.opentripplanner.routing.graph.Graph;
+import org.opentripplanner.routing.linking.DisposableEdgeCollection;
 import org.opentripplanner.routing.linking.LinkingDirection;
+import org.opentripplanner.routing.linking.Scope;
 import org.opentripplanner.routing.vehicle_parking.VehicleParking;
 import org.opentripplanner.routing.vehicle_parking.VehicleParkingHelper;
+import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.edge.StreetTransitEntranceLink;
 import org.opentripplanner.street.model.edge.StreetTransitStopLink;
 import org.opentripplanner.street.model.edge.StreetVehicleParkingLink;
 import org.opentripplanner.street.model.edge.VehicleParkingEdge;
+import org.opentripplanner.street.model.vertex.StreetVertex;
 import org.opentripplanner.street.model.vertex.TransitEntranceVertex;
 import org.opentripplanner.street.model.vertex.TransitStopVertex;
 import org.opentripplanner.street.model.vertex.VehicleParkingEntranceVertex;
+import org.opentripplanner.street.model.vertex.Vertex;
 import org.opentripplanner.street.search.TraverseMode;
 import org.opentripplanner.street.search.TraverseModeSet;
 import org.opentripplanner.transit.model.site.GroupStop;
@@ -43,6 +49,8 @@ public class StreetLinkerModule implements GraphBuilderModule {
   private final TransitModel transitModel;
   private final DataImportIssueStore issueStore;
   private final Boolean addExtraEdgesToAreas;
+  private Scope scope = Scope.PERMANENT;
+  private final List<DisposableEdgeCollection> disposableCollections;
 
   public StreetLinkerModule(
     Graph graph,
@@ -54,11 +62,24 @@ public class StreetLinkerModule implements GraphBuilderModule {
     this.transitModel = transitModel;
     this.issueStore = issueStore;
     this.addExtraEdgesToAreas = addExtraEdgesToAreas;
+    this.disposableCollections = new ArrayList<>();
   }
 
   /** For test only */
   public static void linkStreetsForTestOnly(Graph graph, TransitModel model) {
     new StreetLinkerModule(graph, model, DataImportIssueStore.NOOP, false).buildGraph();
+  }
+
+  public Scope getScope() {
+    return scope;
+  }
+
+  public void setScope(Scope scope) {
+    this.scope = scope;
+  }
+
+  public List<DisposableEdgeCollection> getDisposableCollections() {
+    return disposableCollections;
   }
 
   @Override
@@ -75,6 +96,31 @@ public class StreetLinkerModule implements GraphBuilderModule {
 
     // Calculates convex hull of a graph which is shown in routerInfo API point
     graph.calculateConvexHull();
+  }
+
+  private void linkWithScope(
+    Vertex vertex,
+    TraverseModeSet traverseModes,
+    LinkingDirection direction,
+    BiFunction<Vertex, StreetVertex, List<Edge>> edgeFunction
+  ) {
+    switch (scope) {
+      case PERMANENT:
+        graph.getLinker().linkVertexPermanently(vertex, traverseModes, direction, edgeFunction);
+        break;
+      case REALTIME:
+        disposableCollections.add(
+          graph.getLinker().linkVertexForRealTime(vertex, traverseModes, direction, edgeFunction)
+        );
+        break;
+      case REQUEST:
+        disposableCollections.add(
+          graph.getLinker().linkVertexForRequest(vertex, traverseModes, direction, edgeFunction)
+        );
+        break;
+      default:
+        throw new IllegalStateException("Unknown scope: " + scope);
+    }
   }
 
   public void linkTransitStops(Graph graph, TransitModel transitModel) {
@@ -121,98 +167,90 @@ public class StreetLinkerModule implements GraphBuilderModule {
         }
       }
 
-      graph
-        .getLinker()
-        .linkVertexPermanently(
-          tStop,
-          modes,
-          LinkingDirection.BOTH_WAYS,
-          (vertex, streetVertex) ->
-            List.of(
-              StreetTransitStopLink.createStreetTransitStopLink(
-                (TransitStopVertex) vertex,
-                streetVertex
-              ),
-              StreetTransitStopLink.createStreetTransitStopLink(
-                streetVertex,
-                (TransitStopVertex) vertex
-              )
+      linkWithScope(
+        tStop,
+        modes,
+        LinkingDirection.BOTH_WAYS,
+        (vertex, streetVertex) ->
+          List.of(
+            StreetTransitStopLink.createStreetTransitStopLink(
+              (TransitStopVertex) vertex,
+              streetVertex
+            ),
+            StreetTransitStopLink.createStreetTransitStopLink(
+              streetVertex,
+              (TransitStopVertex) vertex
             )
-        );
+          )
+      );
       //noinspection Convert2MethodRef
       progress.step(m -> LOG.info(m));
     }
     LOG.info(progress.completeMessage());
   }
 
-  private static void linkVehicleParkingWithLinker(
+  private void linkVehicleParkingWithLinker(
     Graph graph,
     VehicleParkingEntranceVertex vehicleParkingVertex
   ) {
     if (vehicleParkingVertex.isWalkAccessible()) {
-      graph
-        .getLinker()
-        .linkVertexPermanently(
-          vehicleParkingVertex,
-          new TraverseModeSet(TraverseMode.WALK),
-          LinkingDirection.BOTH_WAYS,
-          (vertex, streetVertex) ->
-            List.of(
-              StreetVehicleParkingLink.createStreetVehicleParkingLink(
-                (VehicleParkingEntranceVertex) vertex,
-                streetVertex
-              ),
-              StreetVehicleParkingLink.createStreetVehicleParkingLink(
-                streetVertex,
-                (VehicleParkingEntranceVertex) vertex
-              )
+      linkWithScope(
+        vehicleParkingVertex,
+        new TraverseModeSet(TraverseMode.WALK),
+        LinkingDirection.BOTH_WAYS,
+        (vertex, streetVertex) ->
+          List.of(
+            StreetVehicleParkingLink.createStreetVehicleParkingLink(
+              (VehicleParkingEntranceVertex) vertex,
+              streetVertex
+            ),
+            StreetVehicleParkingLink.createStreetVehicleParkingLink(
+              streetVertex,
+              (VehicleParkingEntranceVertex) vertex
             )
-        );
+          )
+      );
     }
 
     if (vehicleParkingVertex.isCarAccessible()) {
-      graph
-        .getLinker()
-        .linkVertexPermanently(
-          vehicleParkingVertex,
-          new TraverseModeSet(TraverseMode.CAR),
-          LinkingDirection.BOTH_WAYS,
-          (vertex, streetVertex) ->
-            List.of(
-              StreetVehicleParkingLink.createStreetVehicleParkingLink(
-                (VehicleParkingEntranceVertex) vertex,
-                streetVertex
-              ),
-              StreetVehicleParkingLink.createStreetVehicleParkingLink(
-                streetVertex,
-                (VehicleParkingEntranceVertex) vertex
-              )
+      linkWithScope(
+        vehicleParkingVertex,
+        new TraverseModeSet(TraverseMode.CAR),
+        LinkingDirection.BOTH_WAYS,
+        (vertex, streetVertex) ->
+          List.of(
+            StreetVehicleParkingLink.createStreetVehicleParkingLink(
+              (VehicleParkingEntranceVertex) vertex,
+              streetVertex
+            ),
+            StreetVehicleParkingLink.createStreetVehicleParkingLink(
+              streetVertex,
+              (VehicleParkingEntranceVertex) vertex
             )
-        );
+          )
+      );
     }
   }
 
   private void linkTransitEntrances(Graph graph) {
     LOG.info("Linking transit entrances to graph...");
     for (TransitEntranceVertex tEntrance : graph.getVerticesOfType(TransitEntranceVertex.class)) {
-      graph
-        .getLinker()
-        .linkVertexPermanently(
-          tEntrance,
-          new TraverseModeSet(TraverseMode.WALK),
-          LinkingDirection.BOTH_WAYS,
-          (vertex, streetVertex) ->
-            List.of(
-              StreetTransitEntranceLink.createStreetTransitEntranceLink(
-                (TransitEntranceVertex) vertex,
-                streetVertex
-              ),
-              StreetTransitEntranceLink.createStreetTransitEntranceLink(
-                streetVertex,
-                (TransitEntranceVertex) vertex
-              )
+      linkWithScope(
+        tEntrance,
+        new TraverseModeSet(TraverseMode.WALK),
+        LinkingDirection.BOTH_WAYS,
+        (vertex, streetVertex) ->
+          List.of(
+            StreetTransitEntranceLink.createStreetTransitEntranceLink(
+              (TransitEntranceVertex) vertex,
+              streetVertex
+            ),
+            StreetTransitEntranceLink.createStreetTransitEntranceLink(
+              streetVertex,
+              (TransitEntranceVertex) vertex
             )
-        );
+          )
+      );
     }
   }
 

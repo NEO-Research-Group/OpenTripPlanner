@@ -210,11 +210,11 @@ public class UpdaterConfigurator {
     }
 
     for (var configItem : updatersParameters.getTransitChangeUpdaterParameters()) {
-      updaters.add(new TransitChangeUpdater(configItem, transitModel, graph.getLinker()));
+      updaters.add(new TransitChangeUpdater(configItem));
     }
 
     for (var configItem : updatersParameters.getBikeUpdaterParameters()) {
-      updaters.add(new BikeUpdater(configItem, transitModel, graph.getLinker()));
+      updaters.add(new BikeUpdater(configItem, transitModel, graph));
     }
 
     return updaters;

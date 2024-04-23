@@ -66,9 +66,23 @@ public class TransitChangeApi {
   }
 
   @POST
+  @Path("/resetGTFS")
+  public Response resetTransit() {
+    TransitChangeUpdater.resetTransit();
+    return Response.ok().build();
+  }
+
+  @POST
   @Path("/addCycleway")
   public Response bikePath(BikeUpdater.BikeUpdate bikeUpdate) {
     BikeUpdater.addBike(bikeUpdate);
+    return Response.ok().build();
+  }
+
+  @POST
+  @Path("/resetCycleway")
+  public Response resetCycleway() {
+    BikeUpdater.resetBike();
     return Response.ok().build();
   }
 

@@ -17,6 +17,8 @@ import org.opentripplanner.graph_builder.module.StreetLinkerModule;
 import org.opentripplanner.gtfs.graphbuilder.GtfsBundle;
 import org.opentripplanner.gtfs.graphbuilder.GtfsModule;
 import org.opentripplanner.model.calendar.ServiceDateInterval;
+import org.opentripplanner.routing.linking.DisposableEdgeCollection;
+import org.opentripplanner.routing.linking.Scope;
 import org.opentripplanner.routing.linking.VertexLinker;
 import org.opentripplanner.standalone.config.RouterConfig;
 import org.opentripplanner.standalone.configure.ConstructApplication;
@@ -30,12 +32,12 @@ public class TransitChangeUpdater implements GraphUpdater {
 
   public enum TransitChangeMessageType {
     GTFS_FEED,
-    FINISH,
+    RESET,
   }
 
   public record TransitChangeMessage(byte[] data, TransitChangeMessageType type) {
-    public static TransitChangeMessage finish() {
-      return new TransitChangeMessage(new byte[0], TransitChangeMessageType.FINISH);
+    public static TransitChangeMessage reset() {
+      return new TransitChangeMessage(new byte[0], TransitChangeMessageType.RESET);
     }
 
     public static TransitChangeMessage gtfsFeed(byte[] data) {
@@ -46,23 +48,13 @@ public class TransitChangeUpdater implements GraphUpdater {
   private static final Logger LOG = LoggerFactory.getLogger(TransitChangeUpdater.class);
 
   private WriteToGraphCallback saveResultOnGraph;
-  private TransitModel transitModel;
-
-  private VertexLinker linker;
 
   private TransitChangeUpdaterParameters parameters;
-
   private static BlockingQueue<TransitChangeMessage> queue = new LinkedBlockingQueue<>();
-
   private List<ZipFileDataSource> gtfsFeeds = new ArrayList<>();
+  private final List<DisposableEdgeCollection> disposableCollections = new ArrayList<>();
 
-  public TransitChangeUpdater(
-    TransitChangeUpdaterParameters parameters,
-    TransitModel transitModel,
-    VertexLinker linker
-  ) {
-    this.transitModel = transitModel;
-    this.linker = linker;
+  public TransitChangeUpdater(TransitChangeUpdaterParameters parameters) {
     this.parameters = parameters;
   }
 
@@ -75,21 +67,20 @@ public class TransitChangeUpdater implements GraphUpdater {
     queue.add(message);
   }
 
-  private static void finish() {
-    queue.add(TransitChangeMessage.finish());
+  public static void resetTransit() {
+    queue.add(TransitChangeMessage.reset());
   }
 
   @Override
   public void run() throws Exception {
     LOG.info("Running transit change updater");
-    boolean isRunning = true;
 
-    while (isRunning) {
-      try {
+    try {
+      while (true) {
         var message = queue.take();
         LOG.info("Received message of type: {}", message.type());
-        if (message.type() == TransitChangeMessageType.FINISH) {
-          isRunning = false;
+        if (message.type() == TransitChangeMessageType.RESET) {
+          removeTransitEdges();
           continue;
         } else if (message.type() != TransitChangeMessageType.GTFS_FEED) {
           LOG.warn("Unknown message type {}", message.type());
@@ -120,22 +111,32 @@ public class TransitChangeUpdater implements GraphUpdater {
           builders.add(
             new GtfsModule(bundles, transitModel, graph, ServiceDateInterval.unbounded())
           );
-          builders.add(
-            new StreetLinkerModule(graph, transitModel, DataImportIssueStore.NOOP, false)
+          var linker = new StreetLinkerModule(
+            graph,
+            transitModel,
+            DataImportIssueStore.NOOP,
+            false
           );
+          linker.setScope(Scope.REALTIME);
+          builders.add(linker);
           builders.forEach(GraphBuilderModule::buildGraph);
+          disposableCollections.addAll(linker.getDisposableCollections());
           ConstructApplication.creatTransitLayerForRaptor(
             transitModel,
             RouterConfig.DEFAULT.transitTuningConfig() // FIXME: we should take the the transit config from the real config, not default
           );
           LOG.info("Graph updated in {} ms", System.currentTimeMillis() - time);
         });
-      } catch (InterruptedException e) {
-        LOG.info(this + " interrupted: going to stop");
-        isRunning = false;
       }
+    } catch (InterruptedException e) {
+      LOG.info(this + " interrupted: going to stop");
     }
     LOG.info("Finishing " + this);
+  }
+
+  private void removeTransitEdges() {
+    disposableCollections.forEach(DisposableEdgeCollection::disposeEdges);
+    disposableCollections.clear();
   }
 
   private ZipFileDataSource dataSourceFromMessage(TransitChangeMessage message) {
@@ -162,7 +163,6 @@ public class TransitChangeUpdater implements GraphUpdater {
   public void teardown() {
     LOG.info("Stopping transit change updater");
     deleteGTFSFeeds();
-    finish();
     LOG.info("Finish message sent");
   }
 
