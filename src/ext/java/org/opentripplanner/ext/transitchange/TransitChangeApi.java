@@ -67,8 +67,8 @@ public class TransitChangeApi {
 
   @POST
   @Path("/addCycleway")
-  public Response bikePath() {
-    BikeUpdater.addBike("Hola");
+  public Response bikePath(BikeUpdater.BikeUpdate bikeUpdate) {
+    BikeUpdater.addBike(bikeUpdate);
     return Response.ok().build();
   }
 
