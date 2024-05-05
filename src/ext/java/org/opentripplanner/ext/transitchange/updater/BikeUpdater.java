@@ -14,6 +14,7 @@ import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.edge.StreetEdge;
 import org.opentripplanner.street.model.edge.StreetEdgeBuilder;
 import org.opentripplanner.street.model.vertex.VertexLabel;
+import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.service.TransitModel;
 import org.opentripplanner.updater.spi.GraphUpdater;
 import org.opentripplanner.updater.spi.WriteToGraphCallback;
@@ -39,7 +40,7 @@ public class BikeUpdater implements GraphUpdater {
     }
   }
 
-  public record BikeUpdate(long[] osmNodeIds, boolean bothways, OSMWayTagDTO[] osmTags) {}
+  public record BikeUpdate(String[] osmNodeIds, boolean bothways, OSMWayTagDTO[] osmTags) {}
 
   private static final BlockingQueue<BikeUpdateMessage> queue = new LinkedBlockingQueue<>();
 
@@ -69,20 +70,6 @@ public class BikeUpdater implements GraphUpdater {
     this.saveResultOnGraph = saveResultOnGraph;
   }
 
-  private long[] ruta = {
-    418493124L,
-    418492935L,
-    5882416038L,
-    7133340154L,
-    418496268L,
-    2008332008L,
-    3172040868L,
-    418496614L,
-    7133340155L,
-    3172040869L,
-    3152128571L,
-  };
-
   @Override
   public void run() throws Exception {
     LOG.info("Running bike updater");
@@ -108,13 +95,40 @@ public class BikeUpdater implements GraphUpdater {
     }
   }
 
+  private VertexLabel computeVertexLabel(String vertexId) {
+    String[] parts = vertexId.split("\\|", 2);
+    switch (parts[0]) {
+      case "OsmNodeLabel":
+        return VertexLabel.osm(Long.parseLong(parts[1].substring(9)));
+      case "FeedScopedIdLabel":
+        return VertexLabel.feedScopedId(FeedScopedId.parse(parts[1]));
+      case "OsmNodeOnLevelLabel":
+        String[] idLevel = parts[1].substring(9).split("/");
+        return VertexLabel.osm(Long.parseLong(idLevel[0]), idLevel[1]);
+      case "StringLabel":
+        return VertexLabel.string(parts[1]);
+      default:
+        throw new IllegalArgumentException("Unknown vertex label: " + parts[0]);
+    }
+  }
+
   private void addRuta(Graph graph, BikeUpdate bike) {
-    long[] ruta = bike.osmNodeIds();
+    String[] ruta = bike.osmNodeIds();
     for (int i = 0; i < ruta.length - 1; i++) {
       if (bike.bothways()) {
-        addBothWays(graph, VertexLabel.osm(ruta[i]), VertexLabel.osm(ruta[i + 1]), bike.osmTags());
+        addBothWays(
+          graph,
+          computeVertexLabel(ruta[i]),
+          computeVertexLabel(ruta[i + 1]),
+          bike.osmTags()
+        );
       } else {
-        addBikeEdge(graph, VertexLabel.osm(ruta[i]), VertexLabel.osm(ruta[i + 1]), bike.osmTags());
+        addBikeEdge(
+          graph,
+          computeVertexLabel(ruta[i]),
+          computeVertexLabel(ruta[i + 1]),
+          bike.osmTags()
+        );
       }
     }
   }

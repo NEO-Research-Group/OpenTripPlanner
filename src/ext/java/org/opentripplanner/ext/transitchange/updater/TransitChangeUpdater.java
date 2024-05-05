@@ -163,7 +163,6 @@ public class TransitChangeUpdater implements GraphUpdater {
   public void teardown() {
     LOG.info("Stopping transit change updater");
     deleteGTFSFeeds();
-    LOG.info("Finish message sent");
   }
 
   private void deleteGTFSFeeds() {

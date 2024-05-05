@@ -92,6 +92,9 @@ otp.modules.multimodal.MultimodalPlannerModule =
         this.stopsLayer = new otp.layers.StopsLayer(this);
         this.areaStopsLayer = new otp.layers.AreaStopsLayer(this);
         this.geofencingZonesLayer = new otp.layers.GeofencingZonesLayer(this);
+
+        // Add OSM Street IDs layer
+        this.osmIdsStreetEdge = new otp.layers.OsmIdsStreetEdgeLayer(this);
     },
 
     routesLoaded : function() {
