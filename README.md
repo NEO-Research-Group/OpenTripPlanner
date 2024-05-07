@@ -39,4 +39,15 @@ docker build -t moven.otp -f {{dockerfile}} .
 
 Observe that the intermediate files required above to shorten the building process can be obtained by running the docker build process up to a given target stage (with the `--target` option) and then extracting the generated file from the docker image (commands not shown here).
 
+## Extensions
+
+The extended version of OpenTripPlanner in this repository contains three differente extensions:
+1. Two endpoints to add new transit modes and reset the added transits (public transportation modes).
+2. Two endpoints to add new bike lanes and remove them from the graph.
+3. One vector tile later to query the edges in the graph that can be transformed into bike lanes and the IDs of the nodes at their extremes (to be used in the previous endpoint).
+
+In the following we describe the details of these three functionalities:
+
+### Transit modes
+
 
