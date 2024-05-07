@@ -64,7 +64,7 @@ curl --location --request POST 'http://localhost:8080/otp/routers/default/transi
 ### Bike lanes
 
 There are two endpoints related to the addition of new bike lanes:
-* `/otp/routers/default/transitchange/addCycleway` (POST): this endpoint allows the user to add new bike lanes in the graph. The body of the request is a JSON object with three fields: `osmNodeIds`, `bothways`, and `osmTags`. The lane is specified by providing in `osmNodeIds` a list of IDs of consecutive nodes in the graph. The field `bothways` is a Boolean value that indicates if the bike lanes will be one-way (`true`) or two-way (`false`). Finaly, the `osmTags` identify the kind of bike lane. It is possible to provide several key-value pairs identifying the kind of highway. The details about the meaning of these key-value pairs can be found in the official [OpenStreetMap documentation](https://wiki.openstreetmap.org/wiki/Highways). For example, a dedicated bike lane has key-value pair `highway=cycleway`. A request example for this endpoint is:
+* `/otp/routers/default/transitchange/addCycleway` (POST): this endpoint allows the user to add new bike lanes in the graph. The body of the request is a JSON object with three fields: `osmNodeIds`, `bothways`, and `osmTags`. The lane is specified by providing in `osmNodeIds` a list of IDs of consecutive nodes in the graph. These IDs can be obtained from the vector tile layer described in the next section. The field `bothways` is a Boolean value that indicates if the bike lanes will be one-way (`true`) or two-way (`false`). Finaly, the `osmTags` identify the kind of bike lane. It is possible to provide several key-value pairs identifying the kind of highway. The details about the meaning of these key-value pairs can be found in the official [OpenStreetMap documentation](https://wiki.openstreetmap.org/wiki/Highways). For example, a dedicated bike lane has key-value pair `highway=cycleway`. A request example for this endpoint is:
 ```
 curl --location 'http://localhost:8080/otp/routers/default/transitchange/addCycleway' \
 --header 'Content-Type: application/json' \
@@ -96,4 +96,11 @@ curl --location 'http://localhost:8080/otp/routers/default/transitchange/addCycl
 * `/otp/routers/default/transitchange/resetCycleway` (POST): this endpoint allows the user to remove all the bike lanes added using the previous endpoint. This makes it possible to use the same instance of the container for different configurations of the bike lanes. A request example for this endpoint is:
 ```
 curl --location --request POST 'http://localhost:8080/otp/routers/default/transitchange/resetCycleway'
+```
+
+### Vector tile layer
+
+The endpoint to add bike lanes require a list of node IDs that OpenTripPlanner recognizes. The information of these IDs can be obtained from the vector tile layer described in this section. This layer uses the binary `pbf` format with the Mapbox Vector Tile representation used in Geographical Information Systems. When a tile is requested, the server sends the edges in that tile that could be transformed into a bike lane. For each edge returns two fields, `origin_osmid` and `destination_osmid`, which contains the node IDs of the tail and the head of the edge. This layer can be access using request in the form: `/otp/routers/default/vectorTiles/osmids/{{z}}/{{x}}/{{y}}.pbf`, where `x`, `y` and `z` are the specification of a tile in the XYZ format (Mapbox Vector Tiles). In particular, `z` is the zoom level and `x` and `y` are the coordinates of the tile at that zoom level. A request example of a tile is:
+```
+curl --location 'http://localhost:8080/otp/routers/default/vectorTiles/osmids/16/31953/25572.pbf'
 ```
