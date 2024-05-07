@@ -50,4 +50,13 @@ In the following we describe the details of these three functionalities:
 
 ### Transit modes
 
-
+Thre are two endpoints related to the transit modes:
+* `/otp/routers/default/transitchange/addGTFS` (POST): this endpoint allows the user to add new transit modes. The new transit mode must be provided in `*.gtfs.zip` format as an attached file. The parameter name for that file is `feed`. A request example for this endpoint is:
+```
+curl --location 'http://localhost:8080/otp/routers/default/transitchange/addGTFS' \
+--form 'feed=@"/home/francis/moven.exp.zip"'
+```
+* `/otp/routers/default/transitchange/resetGTFS` (POST): this endpoint allows the user to remove all the transit modes previously added using the previous endpoint. This makes it possible to use the same instance of the container for different configurations of the transit modes. A request example for this endpoint is:
+```
+curl --location --request POST 'http://localhost:8080/otp/routers/default/transitchange/resetGTFS'
+```
