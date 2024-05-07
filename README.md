@@ -61,7 +61,7 @@ curl --location 'http://localhost:8080/otp/routers/default/transitchange/addGTFS
 curl --location --request POST 'http://localhost:8080/otp/routers/default/transitchange/resetGTFS'
 ```
 
-### Bike lanes additions
+### Bike lanes
 
 There are two endpoints related to the addition of new bike lanes:
 * `/otp/routers/default/transitchange/addCycleway` (POST): this endpoint allows the user to add new bike lanes in the graph. The body of the request is a JSON object with three fields: `osmNodeIds`, `bothways`, and `osmTags`. The lane is specified by providing in `osmNodeIds` a list of IDs of consecutive nodes in the graph. The field `bothways` is a Boolean value that indicates if the bike lanes will be one-way (`true`) or two-way (`false`). Finaly, the `osmTags` identify the kind of bike lane. It is possible to provide several key-value pairs identifying the kind of highway. The details about the meaning of these key-value pairs can be found in the official [OpenStreetMap documentation](https://wiki.openstreetmap.org/wiki/Highways). For example, a dedicated bike lane has key-value pair `highway=cycleway`. A request example for this endpoint is:
