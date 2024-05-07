@@ -29,11 +29,14 @@ The container exposes port 8080/tcp, where the APIs and a simple client is avail
 
 Building the container using the process explained in the previous section can be a slow process (several minutes). This process can be shortened if we provide the intermediate information that the building process needs. In particular:
 * If we provide the `jar` file with OpenTripPlanner, we can avoid stage 1. The `jar` file must be in the `target` folder. You can start the building process with `Dockerfile.street`.
-* If we provide the `streetGraph.obj` file generated in stage 2 in addition to the `jar` file, we can skip stages 1 and 2. The `jar` file must be in the `target` folder and the `streetGraph.obj` (together with the `*.gtfs.zip` files) must be in the `config` folder. You can start the building process with `Dockerfile.graph`.
-* If we provide the `graph.obj` file generated in stage 3, in addition to the `jar` file we can skip stages 1, 2 and 3. The `jar` file must be in the `target` folder and the `graph.obj` must be in the `config` folder. You can start the building process with `Dockerfile.final`.
+* If we provide the `streetGraph.obj` file generated in stage 2 in addition to the `jar` file, we can skip stages 1 and 2. The `jar` file must be in the `target` folder and the `streetGraph.obj` (together with the `*.gtfs.zip` files) must be in the `config` folder. You can start the building process with `Dockerfile.graph`. This shortcut for building the container could be used when new streets are available in the cities. It makes sense to change hte street graph every few week/months.
+* If we provide the `graph.obj` file generated in stage 3, in addition to the `jar` file we can skip stages 1, 2 and 3. The `jar` file must be in the `target` folder and the `graph.obj` must be in the `config` folder. You can start the building process with `Dockerfile.final`. This shortcut for building the container is specially interesting to update the transit information, which can change every few weeks/months.
 
 For running the specific `Dockerfile`s you can use the command:
 ```
 docker build -t moven.otp -f {{dockerfile}} .
 ```
+
+Observe that the intermediate files required above to shorten the building process can be obtained by running the docker build process up to a given target stage (with the `--target` option) and then extracting the generated file from the docker image (commands not shown here).
+
 
