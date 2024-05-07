@@ -1,0 +1,11 @@
+# Prepare the final image with the computed graph
+
+FROM eclipse-temurin:17-jre-alpine as final
+WORKDIR /data
+RUN mkdir -p /data/otp
+COPY config/*.json /data/otp
+COPY docker-entrypoint.sh /data
+COPY target/*-shaded.jar /data
+COPY config/graph.obj /data/otp
+EXPOSE 8080/tcp
+ENTRYPOINT [ "/data/docker-entrypoint.sh", "--load", "otp" ]
