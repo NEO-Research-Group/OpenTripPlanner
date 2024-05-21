@@ -1,0 +1,7 @@
+{
+    "otpFeatures" : {
+        "ActuatorAPI" : true,
+        "TransitChangeAPI": true,
+        "SandboxAPIMapboxVectorTilesApi": true
+    }
+}
