@@ -21,7 +21,7 @@ FROM eclipse-temurin:17-jre-alpine as graph
 WORKDIR /data
 # Download the Andalucia map
 RUN mkdir -p /data/otp
-COPY config/*.gtfs.zip /data/otp
+COPY config/*.gtfs.zip /data/otp/
 COPY docker-entrypoint.sh /data
 COPY --from=build /data/target/*-shaded.jar /data
 COPY --from=street /data/otp/streetGraph.obj /data/otp
@@ -32,7 +32,7 @@ RUN /data/docker-entrypoint.sh --loadStreet --save otp
 FROM eclipse-temurin:17-jre-alpine as final
 WORKDIR /data
 RUN mkdir -p /data/otp
-COPY config/*.json /data/otp
+COPY config/*.json /data/otp/
 COPY docker-entrypoint.sh /data
 COPY --from=build /data/target/*-shaded.jar /data
 COPY --from=graph /data/otp/graph.obj /data/otp
