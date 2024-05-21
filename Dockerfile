@@ -9,7 +9,7 @@ RUN mvn -f /data/pom.xml package -DskipTests
 FROM eclipse-temurin:17-jre-alpine as street
 WORKDIR /data
 # Download the Andalucia map
-RUN mkdir -p /data/otp && wget -P /data/otp http://download.geofabrik.de/europe/spain/andalucia-latest.osm.pbf
+ADD http://download.geofabrik.de/europe/spain/andalucia-latest.osm.pbf /data/otp/
 COPY docker-entrypoint.sh /data
 COPY --from=build /data/target/*-shaded.jar /data
 RUN /data/docker-entrypoint.sh --buildStreet otp
