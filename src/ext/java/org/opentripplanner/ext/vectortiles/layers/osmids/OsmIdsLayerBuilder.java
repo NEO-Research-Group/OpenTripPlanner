@@ -40,10 +40,7 @@ public class OsmIdsLayerBuilder extends LayerBuilder<Edge> {
       .filter(StreetEdge.class::isInstance)
       .map(StreetEdge.class::cast) // Filter by StreetEdge
       .map(edge -> {
-        var coords = List
-          .of(edge.getFromVertex().getCoordinate(), edge.getToVertex().getCoordinate())
-          .toArray(new Coordinate[0]);
-        var line = GeometryUtils.getGeometryFactory().createLineString(coords);
+        var line = edge.getGeometry();
         line.setUserData(edge);
         return line;
       })
